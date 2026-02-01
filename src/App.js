@@ -43,9 +43,7 @@ const TrickyShopApp = () => {
   const [showContextMenu, setShowContextMenu] = useState(null);
   
   // Refs for tricky interactions
-  // Swipe state per cart item
   const [swipeOffsets, setSwipeOffsets] = useState({});
-  const swipeTouchStart = useRef(null);
 
   const searchInputRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -113,11 +111,6 @@ const TrickyShopApp = () => {
     setIsRefreshing(true);
     const data = await simulateAPI(mockProducts, 1000, 1500);
     setProducts(data);
-    setCart([]);
-    setFavorites(new Set());
-    setSearchQuery('');
-    setSelectedCategory('All');
-    setSwipeOffsets({});
     setIsRefreshing(false);
     showToastMessage('Products refreshed!');
   };
@@ -178,8 +171,6 @@ const TrickyShopApp = () => {
       const distance = currentTouch - touchStart;
       if (distance > 0 && distance < 150) {
         setPullDistance(distance);
-        // Prevent page scroll/refresh when pulling
-        e.preventDefault();
       }
     }
   };
@@ -213,38 +204,30 @@ const TrickyShopApp = () => {
   };
 
   // TRICKY CASE 10: Swipe gesture to delete from cart
-  const handleSwipeStart = (e, itemIndex) => {
-    swipeTouchStart.current = { x: e.touches[0].clientX, index: itemIndex };
+  const handleSwipeStart = (e, index) => {
+    setTouchStart({ x: e.touches[0].clientX, index });
   };
 
   const handleSwipeMove = (e) => {
-    if (!swipeTouchStart.current) return;
-    const dx = e.touches[0].clientX - swipeTouchStart.current.x;
-    if (dx < 0) {
-      // Only allow swipe left, cap at -150px
-      setSwipeOffsets(prev => ({
-        ...prev,
-        [swipeTouchStart.current.index]: Math.max(dx, -150)
-      }));
+    if (touchStart && touchStart.index !== undefined) {
+      const dx = e.touches[0].clientX - touchStart.x;
+      if (dx < 0) {
+        setSwipeOffsets(prev => ({ ...prev, [touchStart.index]: Math.max(dx, -120) }));
+      }
     }
   };
 
   const handleSwipeEnd = () => {
-    if (!swipeTouchStart.current) return;
-    const idx = swipeTouchStart.current.index;
-    const offset = swipeOffsets[idx] || 0;
-
-    if (offset < -100) {
-      // Threshold reached — remove item
-      const newCart = cart.filter((_, i) => i !== idx);
-      setCart(newCart);
-      setSwipeOffsets({});
-      showToastMessage('Item removed');
-    } else {
-      // Snap back
-      setSwipeOffsets(prev => ({ ...prev, [idx]: 0 }));
+    if (touchStart && touchStart.index !== undefined) {
+      const offset = swipeOffsets[touchStart.index] || 0;
+      if (offset < -100) {
+        const newCart = cart.filter((_, i) => i !== touchStart.index);
+        setCart(newCart);
+        showToastMessage('Item removed from cart');
+      }
+      setSwipeOffsets(prev => ({ ...prev, [touchStart.index]: 0 }));
+      setTouchStart(null);
     }
-    swipeTouchStart.current = null;
   };
 
   // TRICKY CASE 11: Pinch-to-zoom on product image
@@ -548,7 +531,6 @@ const TrickyShopApp = () => {
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            style={{ touchAction: 'pan-down' }}
           >
             {filteredProducts.map(product => (
               <div 
@@ -700,55 +682,30 @@ const TrickyShopApp = () => {
                   Your cart is empty
                 </div>
               ) : (
-                                  <div className="space-y-4">
+                <div className="space-y-4">
                   {cart.map((item, index) => (
                     <div 
                       key={index}
                       data-testid={`cart-item-${index}`}
-                      className="relative rounded-lg overflow-hidden"
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                      onTouchStart={(e) => handleSwipeStart(e, index)}
+                      onTouchEnd={handleSwipeEnd}
                     >
-                      {/* Red delete background — always present underneath */}
-                      <div className="absolute inset-0 bg-red-500 flex items-center justify-end pr-4 rounded-lg">
-                        <div className="flex flex-col items-center text-white">
-                          <X size={20} />
-                          <span className="text-xs mt-1 font-semibold">Delete</span>
-                        </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-800">{item.name}</h3>
+                        <p className="text-sm text-gray-600">${item.price}</p>
                       </div>
-
-                      {/* Swipe hint pill on first item */}
-                      {index === 0 && (
-                        <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-xs px-3 py-1 rounded-full z-10 whitespace-nowrap pointer-events-none animate-pulse">
-                          ← Swipe left to delete
-                        </div>
-                      )}
-
-                      {/* Main item row — translates on swipe */}
-                      <div 
-                        className="relative z-10 flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                        style={{ 
-                          transform: `translateX(${swipeOffsets[index] || 0}px)`,
-                          transition: swipeTouchStart.current ? 'none' : 'transform 0.3s ease'
+                      <button
+                        data-testid={`remove-cart-item-${index}`}
+                        onClick={() => {
+                          const newCart = cart.filter((_, i) => i !== index);
+                          setCart(newCart);
+                          showToastMessage('Item removed');
                         }}
-                        onTouchStart={(e) => handleSwipeStart(e, index)}
-                        onTouchMove={handleSwipeMove}
-                        onTouchEnd={handleSwipeEnd}
+                        className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-full"
                       >
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-800">{item.name}</h3>
-                          <p className="text-sm text-gray-600">${item.price}</p>
-                        </div>
-                        <button
-                          data-testid={`remove-cart-item-${index}`}
-                          onClick={() => {
-                            const newCart = cart.filter((_, i) => i !== index);
-                            setCart(newCart);
-                            showToastMessage('Item removed');
-                          }}
-                          className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-full"
-                        >
-                          <X size={20} />
-                        </button>
-                      </div>
+                        <X size={20} />
+                      </button>
                     </div>
                   ))}
 
