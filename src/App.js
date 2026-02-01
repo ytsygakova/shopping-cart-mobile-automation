@@ -616,7 +616,7 @@ const TrickyShopApp = () => {
                   data-testid={`add-to-cart-${product.id}`}
                   onClick={() => addToCart(product)}
                   disabled={product.stock === 0}
-                  className="w-full bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="w-full bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition-colors cursor-not-allowed"
                 >
                   {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
                 </button>
