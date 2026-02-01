@@ -113,6 +113,11 @@ const TrickyShopApp = () => {
     setIsRefreshing(true);
     const data = await simulateAPI(mockProducts, 1000, 1500);
     setProducts(data);
+    setCart([]);
+    setFavorites(new Set());
+    setSearchQuery('');
+    setSelectedCategory('All');
+    setSwipeOffsets({});
     setIsRefreshing(false);
     showToastMessage('Products refreshed!');
   };
@@ -173,6 +178,8 @@ const TrickyShopApp = () => {
       const distance = currentTouch - touchStart;
       if (distance > 0 && distance < 150) {
         setPullDistance(distance);
+        // Prevent page scroll/refresh when pulling
+        e.preventDefault();
       }
     }
   };
@@ -541,6 +548,7 @@ const TrickyShopApp = () => {
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            style={{ touchAction: 'pan-down' }}
           >
             {filteredProducts.map(product => (
               <div 
