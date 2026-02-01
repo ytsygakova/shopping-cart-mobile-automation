@@ -131,14 +131,16 @@ const TrickyShopApp = () => {
   };
 
   // TRICKY CASE 6: Toggle favorites
+  // BUG: favorites count in header shows stale count because
+  // we're reading .size before the state actually updates
   const toggleFavorite = (productId) => {
     const newFavorites = new Set(favorites);
     if (newFavorites.has(productId)) {
       newFavorites.delete(productId);
-      showToastMessage('Removed from favorites');
+      showToastMessage(`Removed from favorites (${newFavorites.size} left)`);
     } else {
       newFavorites.add(productId);
-      showToastMessage('Added to favorites');
+      showToastMessage(`Added to favorites (${favorites.size} total)`); // BUG: reads old .size before update
     }
     setFavorites(newFavorites);
   };
@@ -365,6 +367,13 @@ const TrickyShopApp = () => {
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-800">DemoShop</h1>
           <div className="relative flex items-center gap-4">
+            {/* Favorites counter */}
+            {favorites.size > 0 && (
+              <div data-testid="favorites-count" className="text-sm text-gray-600 flex items-center gap-1">
+                <Heart size={14} className="fill-red-500 text-red-500" />
+                {favorites.size}
+              </div>
+            )}
             {/* Cart total display */}
             {cart.length > 0 && (
               <div data-testid="cart-total" className="text-sm font-semibold text-gray-700">
