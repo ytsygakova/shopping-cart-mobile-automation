@@ -46,6 +46,8 @@ const TrickyShopApp = () => {
   // Swipe state per cart item
   const [swipeOffsets, setSwipeOffsets] = useState({});
   const swipeTouchStart = useRef(null);
+
+  const searchInputRef = useRef(null);
   const dropdownRef = useRef(null);
   const productListRef = useRef(null);
 
