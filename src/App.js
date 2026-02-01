@@ -103,11 +103,7 @@ const TrickyShopApp = () => {
     // Valid credentials: user@test.com / password123
     if (username === 'user@test.com' && password === 'password123') {
       setIsLoading(false);
-      if (rememberMe) {
-        sessionStorage.setItem('demoShop_remembered', 'true');
-      } else {
-        sessionStorage.removeItem('demoShop_remembered');
-      }
+      _rememberedSession = rememberMe;
       setScreen('products');
     } else {
       setIsLoading(false);
