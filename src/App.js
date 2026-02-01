@@ -671,30 +671,48 @@ const TrickyShopApp = () => {
                   Your cart is empty
                 </div>
               ) : (
-                <div className="space-y-4">
+                                  <div className="space-y-4">
                   {cart.map((item, index) => (
                     <div 
                       key={index}
                       data-testid={`cart-item-${index}`}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                      className="relative rounded-lg overflow-hidden"
                       onTouchStart={(e) => handleSwipeStart(e, index)}
                       onTouchEnd={handleSwipeEnd}
                     >
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-800">{item.name}</h3>
-                        <p className="text-sm text-gray-600">${item.price}</p>
+                      {/* Swipe reveal background */}
+                      <div className="absolute inset-0 bg-red-500 flex items-center justify-end pr-4 rounded-lg">
+                        <div className="flex flex-col items-center text-white">
+                          <X size={20} />
+                          <span className="text-xs mt-1 font-semibold">Delete</span>
+                        </div>
                       </div>
-                      <button
-                        data-testid={`remove-cart-item-${index}`}
-                        onClick={() => {
-                          const newCart = cart.filter((_, i) => i !== index);
-                          setCart(newCart);
-                          showToastMessage('Item removed');
-                        }}
-                        className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-full"
-                      >
-                        <X size={20} />
-                      </button>
+
+                      {/* Swipe hint pill — disappears after first swipe */}
+                      {index === 0 && cart.length > 0 && (
+                        <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-xs px-3 py-1 rounded-full z-10 whitespace-nowrap pointer-events-none animate-pulse">
+                          ← Swipe left to delete
+                        </div>
+                      )}
+
+                      {/* Main item row — slides on swipe */}
+                      <div className="relative z-10 flex items-center justify-between p-4 bg-gray-50 rounded-lg transition-transform">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-800">{item.name}</h3>
+                          <p className="text-sm text-gray-600">${item.price}</p>
+                        </div>
+                        <button
+                          data-testid={`remove-cart-item-${index}`}
+                          onClick={() => {
+                            const newCart = cart.filter((_, i) => i !== index);
+                            setCart(newCart);
+                            showToastMessage('Item removed');
+                          }}
+                          className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-full"
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
                     </div>
                   ))}
 
