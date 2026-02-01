@@ -14,10 +14,16 @@ const simulateAPI = (data, minDelay = 500, maxDelay = 2000) => {
 
 const TrickyShopApp = () => {
   // Login Screen State
-  const [screen, setScreen] = useState('login');
+  const [screen, setScreen] = useState(() => {
+    // Check if user was remembered from previous session
+    const remembered = sessionStorage.getItem('demoShop_remembered');
+    return remembered === 'true' ? 'products' : 'login';
+  });
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => {
+    return sessionStorage.getItem('demoShop_remembered') === 'true';
+  });
   const [loginError, setLoginError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -43,8 +49,6 @@ const TrickyShopApp = () => {
   const [showContextMenu, setShowContextMenu] = useState(null);
   
   // Refs for tricky interactions
-  const [swipeOffsets, setSwipeOffsets] = useState({});
-
   const searchInputRef = useRef(null);
   const dropdownRef = useRef(null);
   const productListRef = useRef(null);
@@ -99,6 +103,11 @@ const TrickyShopApp = () => {
     // Valid credentials: user@test.com / password123
     if (username === 'user@test.com' && password === 'password123') {
       setIsLoading(false);
+      if (rememberMe) {
+        sessionStorage.setItem('demoShop_remembered', 'true');
+      } else {
+        sessionStorage.removeItem('demoShop_remembered');
+      }
       setScreen('products');
     } else {
       setIsLoading(false);
@@ -204,28 +213,19 @@ const TrickyShopApp = () => {
   };
 
   // TRICKY CASE 10: Swipe gesture to delete from cart
-  const handleSwipeStart = (e, index) => {
-    setTouchStart({ x: e.touches[0].clientX, index });
+  const handleSwipeStart = (e, itemIndex) => {
+    setTouchStart({ x: e.touches[0].clientX, index: itemIndex });
   };
 
-  const handleSwipeMove = (e) => {
-    if (touchStart && touchStart.index !== undefined) {
-      const dx = e.touches[0].clientX - touchStart.x;
-      if (dx < 0) {
-        setSwipeOffsets(prev => ({ ...prev, [touchStart.index]: Math.max(dx, -120) }));
-      }
-    }
-  };
-
-  const handleSwipeEnd = () => {
-    if (touchStart && touchStart.index !== undefined) {
-      const offset = swipeOffsets[touchStart.index] || 0;
-      if (offset < -100) {
+  const handleSwipeEnd = (e) => {
+    if (touchStart) {
+      const swipeDistance = e.changedTouches[0].clientX - touchStart.x;
+      if (swipeDistance < -100) {
+        // Swipe left detected - remove item
         const newCart = cart.filter((_, i) => i !== touchStart.index);
         setCart(newCart);
         showToastMessage('Item removed from cart');
       }
-      setSwipeOffsets(prev => ({ ...prev, [touchStart.index]: 0 }));
       setTouchStart(null);
     }
   };
