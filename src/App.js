@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 
 // Simulates async API call with random delay
+// Simulates async API call with random delay
 const simulateAPI = (data, minDelay = 500, maxDelay = 2000) => {
   return new Promise(resolve => {
     const delay = Math.random() * (maxDelay - minDelay) + minDelay;
