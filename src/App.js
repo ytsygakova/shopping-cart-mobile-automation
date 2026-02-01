@@ -43,7 +43,9 @@ const TrickyShopApp = () => {
   const [showContextMenu, setShowContextMenu] = useState(null);
   
   // Refs for tricky interactions
-  const searchInputRef = useRef(null);
+  // Swipe state per cart item
+  const [swipeOffsets, setSwipeOffsets] = useState({});
+  const swipeTouchStart = useRef(null);
   const dropdownRef = useRef(null);
   const productListRef = useRef(null);
 
@@ -203,20 +205,37 @@ const TrickyShopApp = () => {
 
   // TRICKY CASE 10: Swipe gesture to delete from cart
   const handleSwipeStart = (e, itemIndex) => {
-    setTouchStart({ x: e.touches[0].clientX, index: itemIndex });
+    swipeTouchStart.current = { x: e.touches[0].clientX, index: itemIndex };
   };
 
-  const handleSwipeEnd = (e) => {
-    if (touchStart) {
-      const swipeDistance = e.changedTouches[0].clientX - touchStart.x;
-      if (swipeDistance < -100) {
-        // Swipe left detected - remove item
-        const newCart = cart.filter((_, i) => i !== touchStart.index);
-        setCart(newCart);
-        showToastMessage('Item removed from cart');
-      }
-      setTouchStart(null);
+  const handleSwipeMove = (e) => {
+    if (!swipeTouchStart.current) return;
+    const dx = e.touches[0].clientX - swipeTouchStart.current.x;
+    if (dx < 0) {
+      // Only allow swipe left, cap at -150px
+      setSwipeOffsets(prev => ({
+        ...prev,
+        [swipeTouchStart.current.index]: Math.max(dx, -150)
+      }));
     }
+  };
+
+  const handleSwipeEnd = () => {
+    if (!swipeTouchStart.current) return;
+    const idx = swipeTouchStart.current.index;
+    const offset = swipeOffsets[idx] || 0;
+
+    if (offset < -100) {
+      // Threshold reached — remove item
+      const newCart = cart.filter((_, i) => i !== idx);
+      setCart(newCart);
+      setSwipeOffsets({});
+      showToastMessage('Item removed');
+    } else {
+      // Snap back
+      setSwipeOffsets(prev => ({ ...prev, [idx]: 0 }));
+    }
+    swipeTouchStart.current = null;
   };
 
   // TRICKY CASE 11: Pinch-to-zoom on product image
@@ -677,10 +696,8 @@ const TrickyShopApp = () => {
                       key={index}
                       data-testid={`cart-item-${index}`}
                       className="relative rounded-lg overflow-hidden"
-                      onTouchStart={(e) => handleSwipeStart(e, index)}
-                      onTouchEnd={handleSwipeEnd}
                     >
-                      {/* Swipe reveal background */}
+                      {/* Red delete background — always present underneath */}
                       <div className="absolute inset-0 bg-red-500 flex items-center justify-end pr-4 rounded-lg">
                         <div className="flex flex-col items-center text-white">
                           <X size={20} />
@@ -688,15 +705,24 @@ const TrickyShopApp = () => {
                         </div>
                       </div>
 
-                      {/* Swipe hint pill — disappears after first swipe */}
-                      {index === 0 && cart.length > 0 && (
+                      {/* Swipe hint pill on first item */}
+                      {index === 0 && (
                         <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-xs px-3 py-1 rounded-full z-10 whitespace-nowrap pointer-events-none animate-pulse">
                           ← Swipe left to delete
                         </div>
                       )}
 
-                      {/* Main item row — slides on swipe */}
-                      <div className="relative z-10 flex items-center justify-between p-4 bg-gray-50 rounded-lg transition-transform">
+                      {/* Main item row — translates on swipe */}
+                      <div 
+                        className="relative z-10 flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                        style={{ 
+                          transform: `translateX(${swipeOffsets[index] || 0}px)`,
+                          transition: swipeTouchStart.current ? 'none' : 'transform 0.3s ease'
+                        }}
+                        onTouchStart={(e) => handleSwipeStart(e, index)}
+                        onTouchMove={handleSwipeMove}
+                        onTouchEnd={handleSwipeEnd}
+                      >
                         <div className="flex-1">
                           <h3 className="font-semibold text-gray-800">{item.name}</h3>
                           <p className="text-sm text-gray-600">${item.price}</p>
